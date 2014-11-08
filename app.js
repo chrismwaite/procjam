@@ -5,9 +5,9 @@ var player_colour = "#FFFFFF";
 
 //size
 var columns = 40;
-var rows = 15;
+var rows = 20;
 
-var font_size = 32;
+var font_size = 28;
 var default_style = { font: font_size + "px monospace", fill:default_colour};
 var cursors;
 
@@ -41,28 +41,33 @@ function create() {
 
   //Keyboard controls
   cursors = game.input.keyboard.createCursorKeys();
+  cursors.left.onDown.add(move, this);
+  cursors.right.onDown.add(move, this);
+  cursors.up.onDown.add(move, this);
+  cursors.down.onDown.add(move, this);
 
   //place player
   player = new Player(player_x,player_y);
 }
 
-function update() {
-  if(cursors.left.justPressed(1))
+function move(key) {
+  if(key.event.keyIdentifier == "Left")
   {
     player.updatePosition(player.x-1,player.y);
   }
-  else if(cursors.right.justPressed(1))
-  {
+  else if(key.event.keyIdentifier == "Right") {
     player.updatePosition(player.x+1,player.y);
   }
-  else if(cursors.down.justPressed(1))
-  {
-    player.updatePosition(player.x,player.y+1);
-  }
-  else if(cursors.up.justPressed(1))
-  {
+  else if(key.event.keyIdentifier == "Up") {
     player.updatePosition(player.x,player.y-1);
   }
+  else if(key.event.keyIdentifier == "Down") {
+    player.updatePosition(player.x,player.y+1);
+  }
+}
+
+function update() {
+
 }
 
 function render() {
