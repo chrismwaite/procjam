@@ -41,7 +41,6 @@ function create() {
 
   //Keyboard controls
   cursors = game.input.keyboard.createCursorKeys();
-  //fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
   //place player
   player = new Player(player_x,player_y);
@@ -64,8 +63,6 @@ function update() {
   {
     player.updatePosition(player.x,player.y-1);
   }
-
-  //if(fireButton.isDown)
 }
 
 function render() {
