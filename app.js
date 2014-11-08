@@ -24,6 +24,12 @@ var player_y = 0;
 var screen_width = columns*font_size*0.6;
 var screen_height = rows*font_size;
 
+//caves
+var max_caves = 5;
+var min_caves = 1;
+var min_size = 20;
+var max_size = 60;
+
 //setup the game
 var game = new Phaser.Game(screen_width, screen_height, Phaser.AUTO, 'container', { preload: preload, create: create, update: update, render: render });
 
@@ -35,6 +41,17 @@ function create() {
   //position the container
   $('#container').css('width', screen_width + 'px');
   $('#container').css('margin', '0 auto');
+  $('#content').css('width', screen_width + 'px');
+  $('#content').css('margin', '0 auto');
+
+  $('#generate').click(function() {
+    reset();
+  });
+
+  min_caves = ($('#min-caves').val() != '' ? $('#min-caves').val() : min_caves);
+  max_caves = ($('#max-caves').val() != '' ? $('#max-caves').val() : max_caves);
+  min_size = ($('#min-cave-size').val() != '' ? $('#min-cave-size').val() : min_size);
+  max_size = ($('#max-cave-size').val() != '' ? $('#max-cave-size').val() : max_size);
 
   //generate map
   generateMap();
@@ -131,12 +148,8 @@ function generateMap() {
   }
 
   //build caves
-  var max_caves = 5;
-  var min_caves = 1;
   var number_of_caves = Math.floor((Math.random() * max_caves) + min_caves);
-  var min_size = 20;
-  var max_size = 60;
-
+  
   for(var x=0; x<number_of_caves; x++)
   {
     var size = Math.floor((Math.random() * max_size) + min_size);
@@ -167,6 +180,10 @@ function symbolAtPosition(row, column) {
 
 function debugMap() {
   //console.log("test");
+}
+
+function reset() {
+  game.state.start(game.state.current);
 }
 
 //Entities

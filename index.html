@@ -6,9 +6,20 @@
         <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
         <script src="phaser.min.js"></script>
         <script src="app.js"></script>
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
         <link rel="stylesheet" href="style.css"/>
     </head>
     <body>
     	<div id="container"></div>
+        <div id="content">
+            <div id="about"><p>This game was built for <a href="http://itch.io/jam/procjam">#procjam 2014</a>. Procjam is a game jam about procedural generation.</p><p>The levels in this game are generated procedurally. You can customise a number of parameters below and see the effect they have on the level generation.</p></div>
+            <div id="customise">
+                Minimum number of caves: <input id="min-caves" size="5" value="1" /><br/>
+                Maximum number of caves: <input id="max-caves" size="5" value="5" /><br/>
+                Minimum cave size: <input id="min-cave-size" size="5" value="20" /><br/>
+                Maximum cave size: <input id="max-cave-size" size="5" value="60" /><br/>
+                <button id="generate">Generate</button>
+            </div>
+        </div>
     </body>
 </html>
