@@ -3,11 +3,12 @@ var default_colour = "#F1D4AF";
 var floor_colour = "#E08E79";
 var player_colour = "#FFFFFF";
 var health_colour_4 = "#FFB2B2";
-var health_colour_3 = "#ff6666";
-var health_colour_2 = "#ff0000";
+var health_colour_3 = "#FF6666";
+var health_colour_2 = "#FF0000";
 var health_colour_1 = "#990000";
-var health_colour_0 = "#4c0000";
+var health_colour_0 = "#4C0000";
 var bat_colour = "#000000";
+var snake_colour = "#D1F2A5";
 
 //size
 var columns = 40;
@@ -20,6 +21,7 @@ var cursors;
 //data
 var map = [];
 var display = [];
+var enemy_types;
 
 //entities
 var player;
@@ -59,6 +61,9 @@ function create() {
   max_caves = ($('#max-caves').val() != '' ? +($('#max-caves').val()) : max_caves);
   min_size = ($('#min-cave-size').val() != '' ? +($('#min-cave-size').val()) : min_size);
   max_size = ($('#max-cave-size').val() != '' ? +($('#max-cave-size').val()) : max_size);
+
+  //setup enemy types
+  enemy_types = [{symbol: 'b', colour: bat_colour},{symbol: 's', colour: snake_colour}];
 
   //generate map
   generateMap();
@@ -245,8 +250,11 @@ function populateObjects() {
     {
       //select the position from the array
       var position = possible_positions[index];
+      //decide enemy type
+      var enemy_type_index = Math.floor(Math.random() * (enemy_types.length));
+      var enemy_type = enemy_types[enemy_type_index];
       //create an enemy and push it to the enemies array
-      var enemy = new Enemy(position.column,position.row,'b',bat_colour);
+      var enemy = new Enemy(position.column,position.row,enemy_type.symbol,enemy_type.colour);
       enemies.push(enemy);
       //remove the index from the possible positions so that another enemy can't be placed there
       possible_positions.splice(index, 1);
@@ -257,6 +265,14 @@ function populateObjects() {
   var index = Math.floor((Math.random() * (possible_positions.length-1)));
   var position = possible_positions[index];
   player = new Player(position.column,position.row);
+}
+
+function returnEnemyTypesAsArray() {
+  var enemy_types_array = [];
+  for(var x=0; x<enemy_types.length; x++) {
+    enemy_types_array.push(enemy_types[x].symbol);
+  }
+  return enemy_types_array;
 }
 
 function debugMap() {
@@ -284,7 +300,8 @@ Player.prototype.updatePosition = function(x, y) {
     this.x = x;
     this.y = y;
   }
-  else if(symbolAtPosition(y,x) == 'b')
+  //enemy detection
+  else if($.inArray(symbolAtPosition(y,x),returnEnemyTypesAsArray()) != -1)
   {
     var enemy = returnEnemyAtPosition(y,x);
     enemy.updateHealth(-1);
