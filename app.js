@@ -1,6 +1,7 @@
 //colours
 var default_colour = "#F1D4AF";
 var floor_colour = "#E08E79";
+var drone_colour = "#FF0000";
 var player_colour = "#FFFFFF";
 var health_colour_4 = "#FFB2B2";
 var health_colour_3 = "#FF6666";
@@ -9,6 +10,7 @@ var health_colour_1 = "#990000";
 var health_colour_0 = "#4C0000";
 var bat_colour = "#000000";
 var snake_colour = "#D1F2A5";
+var floor_types = [{symbol: '.', colour: '#E08E79'},{symbol: '~', colour: '#0EBFE9'},{symbol: '.', colour: '#7F9A65'}];
 
 //size
 var columns = 40;
@@ -27,6 +29,10 @@ var enemy_types;
 var player;
 var enemies = [];
 
+//generation
+var mining_drones = [];
+var mining_event;
+
 //general
 var screen_width = columns*font_size*0.6;
 var screen_height = rows*font_size;
@@ -35,7 +41,7 @@ var screen_height = rows*font_size;
 var max_caves = 5;
 var min_caves = 1;
 var min_size = 20;
-var max_size = 60;
+var max_size = 80;
 var min_enemies = 3;
 var max_enemies = 10;
 
@@ -68,6 +74,14 @@ function create() {
   //generate map
   generateMap();
 
+  //initialise the drones
+  initialiseDrones();
+
+  //build the caves
+  mining_event = game.time.events.loop(500, createCaves, this);
+}
+
+function postCreate() {
   //add enemies
   populateObjects();
 
@@ -136,43 +150,36 @@ function render() {
 
 // ######## MAP GENERATION ######### //
 
-function generateCave(size) {
-  var row = Math.floor(Math.random() * (rows-1));
-  var column = Math.floor(Math.random() * (columns-1));
-
-  updateSymbol(row, column, '.');
-
-  for(var x=0; x<size; x++)
+function initialiseDrones() {
+  var number_of_drones = Math.floor((Math.random() * max_caves) + min_caves);
+  for(var x=0; x<number_of_drones; x++)
   {
-    switch(Math.floor((Math.random() * 4) + 1)) {
-      //north
-      case 1:
-        row-1 > 0 ? row-=1 : row=row;
-        break;
-      //east
-      case 2:
-        column+1 < columns ? column+=1 : column=column;
-        break;
-      //south
-      case 3:
-        row+1 < rows ? row+=1 : row=row;
-        break;
-      //west
-      case 4:
-        column-1 > 0 ? column-=1 : column=column;
-        break;
-    }
-
-    updateSymbol(row, column, '.', floor_colour);
-    //now mine the area around it
-    updateSymbol(row-1, column, '.', floor_colour);
-    updateSymbol(row+1, column, '.', floor_colour);
-    updateSymbol(row, column-1, '.', floor_colour);
-    updateSymbol(row, column+1, '.', floor_colour);
+    var life = Math.floor((Math.random() * max_size) + min_size);
+    var row = Math.floor(Math.random() * (rows-1));
+    var column = Math.floor(Math.random() * (columns-1));
+    var drone = new Drone(column, row, life);
+    mining_drones.push(drone);
   }
 }
 
-//procedurally builds the map
+function createCaves() {
+  for(var x=0; x<mining_drones.length; x++)
+  {
+    var drone = mining_drones[x];
+    if(drone.life > 0) {
+      drone.mine();
+    }
+    else {
+      drone.die(x);
+    }
+  }
+  if(mining_drones.length == 0)
+  {
+    game.time.events.remove(mining_event);
+    postCreate();
+  }
+}
+
 function generateMap() {
   //first fill the screen with walls
   for(var y=0; y<rows; y++)
@@ -184,14 +191,6 @@ function generateMap() {
       display[y][x] = game.add.text((font_size*0.6)*x, font_size*y, '#', default_style);
       map[y][x] = '#';
     }
-  }
-
-  //build caves
-  var number_of_caves = Math.floor((Math.random() * max_caves) + min_caves);
-  for(var x=0; x<number_of_caves; x++)
-  {
-    var size = Math.floor((Math.random() * max_size) + min_size);
-    generateCave(size);
   }
 }
 
@@ -381,4 +380,66 @@ Enemy.prototype.remove = function() {
       enemies.splice(x,1);
     }
   }
+}
+
+function Drone(start_column, start_row, life) {
+  this.column = start_column;
+  this.row = start_row;
+  this.life = life;
+  this.colour = drone_colour;
+  this.symbol = 'x';
+  var floor_type = floor_types[Math.floor(Math.random() * (floor_types.length))];
+  this.mine_colour = floor_type.colour;
+  this.mine_symbol = floor_type.symbol;
+  updateSymbol(this.row, this.column, this.symbol, this.colour);
+}
+
+Drone.prototype.mine = function() {
+  if(this.life > 0)
+  {
+    updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+    updateSymbol(this.row-1, this.column, this.mine_symbol, this.mine_colour);
+    updateSymbol(this.row+1, this.column, this.mine_symbol, this.mine_colour);
+    updateSymbol(this.row, this.column-1, this.mine_symbol, this.mine_colour);
+    updateSymbol(this.row, this.column+1, this.mine_symbol, this.mine_colour);
+
+    switch(Math.floor((Math.random() * 4) + 1)) {
+      //north
+      case 1:
+        this.row-1 > 0 ? this.row-=1 : this.row=this.row;
+        break;
+      //east
+      case 2:
+        this.column+1 < columns ? this.column+=1 : this.column=this.column;
+        break;
+      //south
+      case 3:
+        this.row+1 < rows ? this.row+=1 : this.row=this.row;
+        break;
+      //west
+      case 4:
+        this.column-1 > 0 ? this.column-=1 : this.column=this.column;
+        break;
+    }
+
+    updateSymbol(this.row, this.column, this.symbol, this.colour);
+    //now mine the area around it
+    updateSymbol(this.row-1, this.column, this.symbol, this.colour);
+    updateSymbol(this.row+1, this.column, this.symbol, this.colour);
+    updateSymbol(this.row, this.column-1, this.symbol, this.colour);
+    updateSymbol(this.row, this.column+1, this.symbol, this.colour);
+
+    this.life--;
+  }
+}
+
+Drone.prototype.die = function(index) {
+  //remove drone from screen and map
+  updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+  updateSymbol(this.row-1, this.column, this.mine_symbol, this.mine_colour);
+  updateSymbol(this.row+1, this.column, this.mine_symbol, this.mine_colour);
+  updateSymbol(this.row, this.column-1, this.mine_symbol, this.mine_colour);
+  updateSymbol(this.row, this.column+1, this.mine_symbol, this.mine_colour);
+  //remove drone from array
+  mining_drones.splice(index, 1);
 }
