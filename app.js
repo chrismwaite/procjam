@@ -78,7 +78,7 @@ function create() {
   initialiseDrones();
 
   //build the caves
-  mining_event = game.time.events.loop(500, createCaves, this);
+  mining_event = game.time.events.loop(250, createCaves, this);
 }
 
 function postCreate() {
@@ -188,7 +188,8 @@ function generateMap() {
     display[y] = [];
     for(var x=0; x<columns; x++)
     {
-      display[y][x] = game.add.text((font_size*0.6)*x, font_size*y, '#', default_style);
+      var tile = new Tile(x, y, '#', default_colour);
+      display[y][x] = tile;
       map[y][x] = '#';
     }
   }
@@ -200,8 +201,8 @@ function updateSymbol(row, column, symbol, colour) {
   if(typeof  colour === 'undefined') { colour = default_colour; }
   if(display[row] && display[row][column])
   {
-    display[row][column].setText(symbol);
-    display[row][column].setStyle({ font: font_size + "px monospace", fill:colour});
+    display[row][column].updateSymbol(symbol);
+    display[row][column].updateColour(colour);
     map[row][column] = symbol;
   }
 }
@@ -212,6 +213,15 @@ function symbolAtPosition(row, column) {
     return map[row][column];
   }
   return '';
+}
+
+function tileAtPosition(row, column) {
+  var tile = null;
+  if(display[row] && display[row][column])
+  {
+    return display[row][column];
+  }
+  return tile;
 }
 
 function returnArrayOfPositionsWithSymbol(symbol) {
@@ -283,6 +293,23 @@ function reset() {
 }
 
 //Entities
+function Tile(x, y, symbol, colour) {
+  this.symbol = symbol;
+  this.original_colour = colour;
+  this.colour = colour;
+  this.text = game.add.text((font_size*0.6)*x, font_size*y, this.symbol, { font: font_size + "px monospace", fill:this.colour});
+}
+
+Tile.prototype.updateSymbol = function(symbol) {
+  this.symbol = symbol;
+  this.text.setText(this.symbol);
+}
+
+Tile.prototype.updateColour = function(colour) {
+  this.colour = colour;
+  this.text.setStyle({ font: font_size + "px monospace", fill:this.colour});
+}
+
 function Player(x, y) {
   this.x = x;
   this.y = y;
@@ -294,7 +321,8 @@ function Player(x, y) {
 Player.prototype.updatePosition = function(x, y) {
   if(symbolAtPosition(y,x) == '.')
   {
-    updateSymbol(this.y,this.x,'.',floor_colour);
+    var tile = tileAtPosition(this.y,this.x);
+    updateSymbol(this.y,this.x,'.',tile.original_colour);
     updateSymbol(y,x,'@',this.colour);
     this.x = x;
     this.y = y;
@@ -343,7 +371,8 @@ function Enemy(x, y, symbol, colour) {
 Enemy.prototype.updatePosition = function(x, y) {
   if(symbolAtPosition(y,x) == '.')
   {
-    updateSymbol(this.y,this.x,'.',floor_colour);
+    var tile = tileAtPosition(this.y,this.x);
+    updateSymbol(this.y,this.x,'.',tile.original_colour);
     updateSymbol(y,x,this.symbol,this.colour);
     this.x = x;
     this.y = y;
@@ -373,7 +402,8 @@ Enemy.prototype.updateHealth = function(health) {
 
 Enemy.prototype.remove = function() {
   //takes care of map and screen
-  updateSymbol(this.y,this.x,'.',floor_colour);
+  var tile = tileAtPosition(this.y,this.x);
+  updateSymbol(this.y,this.x,'.',tile.original_colour);
   //remove the enemy from the array
   for(var x=0; x<enemies.length; x++) {
     if(enemies[x].x == this.x && enemies[x].y == this.y) {
@@ -402,6 +432,18 @@ Drone.prototype.mine = function() {
     updateSymbol(this.row+1, this.column, this.mine_symbol, this.mine_colour);
     updateSymbol(this.row, this.column-1, this.mine_symbol, this.mine_colour);
     updateSymbol(this.row, this.column+1, this.mine_symbol, this.mine_colour);
+
+    //change the original tile colour - so that anything passing over this tile can utilise that colour
+    var tile = tileAtPosition(this.row, this.column);
+    if(tile!=null) {tile.original_colour = this.mine_colour};
+    tile = tileAtPosition(this.row-1, this.column);
+    if(tile!=null) {tile.original_colour = this.mine_colour};
+    tile = tileAtPosition(this.row+1, this.column);
+    if(tile!=null) {tile.original_colour = this.mine_colour};
+    tile = tileAtPosition(this.row, this.column-1);
+    if(tile!=null) {tile.original_colour = this.mine_colour};
+    tile = tileAtPosition(this.row, this.column+1);
+    if(tile!=null) {tile.original_colour = this.mine_colour};
 
     switch(Math.floor((Math.random() * 4) + 1)) {
       //north
