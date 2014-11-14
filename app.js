@@ -185,13 +185,19 @@ function buildLevel() {
     corridoor_drone.corridoor();
   }
 
+  //create the corridoor drone once the mining drones have finished
   if(mining_drones.length == 0 && corridoor_drone == 'ready')
   {
-    //game.time.events.remove(mining_event);
-    //postCreate();
     var start = cave_positions[0];
     corridoor_drone = new Drone(start.column, start.row, 100);
     console.log('creating corridoor drone');
+  }
+
+  //populate the level once the drones are done
+  if(mining_drones.length == 0 && corridoor_drone == null)
+  {
+    game.time.events.remove(mining_event);
+    postCreate();
   }
 }
 
