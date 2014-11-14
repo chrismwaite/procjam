@@ -31,7 +31,9 @@ var enemies = [];
 
 //generation
 var mining_drones = [];
+var corridoor_drone = 'ready';
 var mining_event;
+var cave_positions = [];
 
 //general
 var screen_width = columns*font_size*0.6;
@@ -78,7 +80,7 @@ function create() {
   initialiseDrones();
 
   //build the caves
-  mining_event = game.time.events.loop(250, createCaves, this);
+  mining_event = game.time.events.loop(250, buildLevel, this);
 }
 
 function postCreate() {
@@ -159,10 +161,13 @@ function initialiseDrones() {
     var column = Math.floor(Math.random() * (columns-1));
     var drone = new Drone(column, row, life);
     mining_drones.push(drone);
+    //store the start positions for corridoors
+    cave_positions.push({row: row, column: column});
   }
 }
 
-function createCaves() {
+function buildLevel() {
+  //mine caves
   for(var x=0; x<mining_drones.length; x++)
   {
     var drone = mining_drones[x];
@@ -173,10 +178,20 @@ function createCaves() {
       drone.die(x);
     }
   }
-  if(mining_drones.length == 0)
+  //mine corridoors
+  if(corridoor_drone != null && corridoor_drone != 'ready')
   {
-    game.time.events.remove(mining_event);
-    postCreate();
+    console.log('corridoor');
+    corridoor_drone.corridoor();
+  }
+
+  if(mining_drones.length == 0 && corridoor_drone == 'ready')
+  {
+    //game.time.events.remove(mining_event);
+    //postCreate();
+    var start = cave_positions[0];
+    corridoor_drone = new Drone(start.column, start.row, 100);
+    console.log('creating corridoor drone');
   }
 }
 
@@ -421,6 +436,7 @@ function Drone(start_column, start_row, life) {
   var floor_type = floor_types[Math.floor(Math.random() * (floor_types.length))];
   this.mine_colour = floor_type.colour;
   this.mine_symbol = floor_type.symbol;
+  this.current_cave = 1;
   updateSymbol(this.row, this.column, this.symbol, this.colour);
 }
 
@@ -472,6 +488,48 @@ Drone.prototype.mine = function() {
     updateSymbol(this.row, this.column+1, this.symbol, this.colour);
 
     this.life--;
+  }
+}
+
+Drone.prototype.corridoor = function(index) {
+  var next_point = cave_positions[this.current_cave];
+  var column = this.column;
+  var row = this.row;
+
+  updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+
+  if(next_point.row > row)
+  {
+    this.row+1 < rows ? this.row+=1 : this.row=this.row;
+  }
+  else if(next_point.row < row)
+  {
+    this.row-1 > 0 ? this.row-=1 : this.row=this.row;
+  }
+  else if(next_point.column > column)
+  {
+    this.column+1 < columns ? this.column+=1 : this.column=this.column;
+  }
+  else if(next_point.column < column)
+  {
+    this.column-1 > 0 ? this.column-=1 : this.column=this.column;
+  }
+
+  updateSymbol(this.row, this.column, this.symbol, this.colour);
+
+  //die
+  if(column == next_point.column && row == next_point.row)
+  {
+    if(cave_positions[this.current_cave+1])
+    {
+      this.current_cave += 1;
+    }
+    else
+    {
+      console.log('corridoor drone dying');
+      updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+      corridoor_drone = null;
+    }
   }
 }
 
