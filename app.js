@@ -10,8 +10,9 @@ var health_colour_1 = "#990000";
 var health_colour_0 = "#4C0000";
 var bat_colour = "#000000";
 var snake_colour = "#D1F2A5";
-var floor_types = [{symbol: '.', colour: '#E08E79'},{symbol: '.', colour: '#7F9A65'}];
-var water_types = [{symbol: '~', colour: '#0EBFE9'}];
+var exit_colour = "#9B30FF";
+var floor_types = [{symbol: '.', colour: '#E08E79'},{symbol: '.', colour: '#7F9A65'},{symbol: '.', colour: '#ffb6da'}];
+var water_types = [{symbol: '~', colour: '#0EBFE9'},{symbol: '~', colour: '#7FFF00'}];
 
 //size
 var columns = 40;
@@ -183,7 +184,8 @@ function initialiseWaterDrones() {
     {
       var life = Math.floor((Math.random() * max_water_size) + min_water_size);
       var position = water_drones_positions[index];
-      var drone = new Drone(position.column, position.row, life, water_types[0].symbol, water_types[0].colour);
+      var water_type = water_types[Math.floor(Math.random() * (water_types.length))];
+      var drone = new Drone(position.column, position.row, life, water_type.symbol, water_type.colour);
       water_drones.push(drone);
     }
   }
@@ -354,6 +356,11 @@ function populateObjects() {
   var index = Math.floor((Math.random() * (possible_positions.length-1)));
   var position = possible_positions[index];
   player = new Player(position.column,position.row);
+
+  //place exit
+  var index = Math.floor((Math.random() * (possible_positions.length-1)));
+  var position = possible_positions[index];
+  updateSymbol(position.row,position.column,'=',exit_colour);
 }
 
 function returnEnemyTypesAsArray() {
@@ -452,6 +459,11 @@ Player.prototype.updatePosition = function(x, y) {
   {
     var enemy = returnEnemyAtPosition(y,x);
     enemy.updateHealth(-1);
+  }
+
+  else if(symbolAtPosition(y,x) == '=')
+  {
+    reset();
   }
 }
 

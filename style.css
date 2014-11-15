@@ -20,3 +20,11 @@ button, input {
 ol li {
 	visibility: hidden;
 }
+
+ul {
+	list-style: none;
+}
+
+.symbol {
+	color: #0EBFE9;
+}
