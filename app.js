@@ -10,7 +10,8 @@ var health_colour_1 = "#990000";
 var health_colour_0 = "#4C0000";
 var bat_colour = "#000000";
 var snake_colour = "#D1F2A5";
-var floor_types = [{symbol: '.', colour: '#E08E79'},{symbol: '~', colour: '#0EBFE9'},{symbol: '.', colour: '#7F9A65'}];
+var floor_types = [{symbol: '.', colour: '#E08E79'},{symbol: '.', colour: '#7F9A65'}];
+var water_types = [{symbol: '~', colour: '#0EBFE9'}];
 
 //size
 var columns = 40;
@@ -23,7 +24,7 @@ var cursors;
 //data
 var map = [];
 var display = [];
-var enemy_types;
+var enemy_types = [{symbol: 'b', colour: bat_colour},{symbol: 's', colour: snake_colour}];
 
 //entities
 var player;
@@ -31,9 +32,11 @@ var enemies = [];
 
 //generation
 var mining_drones = [];
+var water_drones = [];
 var corridoor_drone = 'ready';
 var mining_event;
 var cave_positions = [];
+var build_status = 'ready';
 
 //general
 var screen_width = columns*font_size*0.6;
@@ -46,9 +49,13 @@ var min_size = 20;
 var max_size = 80;
 var min_enemies = 3;
 var max_enemies = 10;
+var min_water_drones = 1;
+var max_water_drones = 3;
+var min_water_size = 10;
+var max_water_size = 30;
 
 //setup the game
-var game = new Phaser.Game(screen_width, screen_height, Phaser.AUTO, 'container', { preload: preload, create: create, update: update, render: render });
+var game = new Phaser.Game(screen_width, screen_height, Phaser.AUTO, 'container', { preload: preload, create: create, update: update});
 
 function preload() {
   game.stage.backgroundColor = '#3B3B3B';
@@ -64,14 +71,6 @@ function create() {
   $('#generate').click(function() {
     reset();
   });
-
-  min_caves = ($('#min-caves').val() != '' ? +($('#min-caves').val()) : min_caves);
-  max_caves = ($('#max-caves').val() != '' ? +($('#max-caves').val()) : max_caves);
-  min_size = ($('#min-cave-size').val() != '' ? +($('#min-cave-size').val()) : min_size);
-  max_size = ($('#max-cave-size').val() != '' ? +($('#max-cave-size').val()) : max_size);
-
-  //setup enemy types
-  enemy_types = [{symbol: 'b', colour: bat_colour},{symbol: 's', colour: snake_colour}];
 
   //generate map
   generateMap();
@@ -146,13 +145,10 @@ function update() {
 
 }
 
-function render() {
-  //special cases - good for debug
-}
-
 // ######## MAP GENERATION ######### //
 
 function initialiseDrones() {
+  //mining drones
   var number_of_drones = Math.floor((Math.random() * max_caves) + min_caves);
   for(var x=0; x<number_of_drones; x++)
   {
@@ -163,6 +159,23 @@ function initialiseDrones() {
     mining_drones.push(drone);
     //store the start positions for corridoors
     cave_positions.push({row: row, column: column});
+  }
+}
+
+function initialiseWaterDrones() {
+  //water drones
+  number_of_drones = Math.floor((Math.random() * max_water_drones) + min_water_drones);
+  var water_drones_positions = returnArrayOfPositionsWithSymbol('.');
+  for(var x=0; x<number_of_drones; x++)
+  {
+    var index = Math.floor((Math.random() * (water_drones_positions.length-1)));
+    if(index >= 0)
+    {
+      var life = Math.floor((Math.random() * max_water_size) + min_water_size);
+      var position = water_drones_positions[index];
+      var drone = new Drone(position.column, position.row, life, water_types[0].symbol, water_types[0].colour);
+      water_drones.push(drone);
+    }
   }
 }
 
@@ -178,23 +191,57 @@ function buildLevel() {
       drone.die(x);
     }
   }
-  //mine corridoors
-  if(corridoor_drone != null && corridoor_drone != 'ready')
+
+  if(build_status == 'ready' && mining_drones.length == 0)
   {
-    console.log('corridoor');
-    corridoor_drone.corridoor();
+    initialiseWaterDrones();
+    build_status = 'water';
   }
 
-  //create the corridoor drone once the mining drones have finished
-  if(mining_drones.length == 0 && corridoor_drone == 'ready')
+  //add water
+  if(build_status == 'water')
   {
-    var start = cave_positions[0];
-    corridoor_drone = new Drone(start.column, start.row, 100);
-    console.log('creating corridoor drone');
+    if(water_drones.length > 0)
+    {
+      for(var x=0; x<water_drones.length; x++)
+      {
+        var drone = water_drones[x];
+        if(drone.life > 0) {
+          drone.water();
+        }
+        else {
+          updateSymbol(drone.row, drone.column, drone.mine_symbol, drone.mine_colour);
+          //remove drone from array
+          water_drones.splice(x, 1);
+        }
+      }
+    }
+    //water drones done
+    else {
+      build_status = 'corridoors';
+    }
+  }
+  
+  //corridoors
+  if(build_status == 'corridoors')
+  {
+    if(corridoor_drone == 'ready')
+    {
+      var start = cave_positions[0];
+      corridoor_drone = new Drone(start.column, start.row, 100);
+    }
+    if(corridoor_drone != null && corridoor_drone != 'ready')
+    {
+      corridoor_drone.corridoor();
+    }
+    if(corridoor_drone == null)
+    {
+      build_status = 'done';
+    }
   }
 
-  //populate the level once the drones are done
-  if(mining_drones.length == 0 && corridoor_drone == null)
+  //done
+  if(build_status == 'done')
   {
     game.time.events.remove(mining_event);
     postCreate();
@@ -305,12 +352,13 @@ function returnEnemyTypesAsArray() {
   return enemy_types_array;
 }
 
-function debugMap() {
-  //console.log("test");
-}
-
 function reset() {
   game.state.start(game.state.current);
+}
+
+function dead() {
+  //you are dead - click to restart
+  
 }
 
 //Entities
@@ -318,6 +366,7 @@ function Tile(x, y, symbol, colour) {
   this.symbol = symbol;
   this.original_colour = colour;
   this.colour = colour;
+  this.original_symbol = symbol;
   this.text = game.add.text((font_size*0.6)*x, font_size*y, this.symbol, { font: font_size + "px monospace", fill:this.colour});
 }
 
@@ -433,16 +482,16 @@ Enemy.prototype.remove = function() {
   }
 }
 
-function Drone(start_column, start_row, life) {
+function Drone(start_column, start_row, life, mine_symbol, mine_colour) {
   this.column = start_column;
   this.row = start_row;
   this.life = life;
   this.colour = drone_colour;
   this.symbol = 'x';
   var floor_type = floor_types[Math.floor(Math.random() * (floor_types.length))];
-  this.mine_colour = floor_type.colour;
-  this.mine_symbol = floor_type.symbol;
-  this.current_cave = 1;
+  this.mine_colour = (typeof mine_colour === 'undefined' ? floor_type.colour : mine_colour);
+  this.mine_symbol = (typeof mine_symbol === 'undefined' ? floor_type.symbol : mine_symbol);
+  this.current_cave = 0;
   updateSymbol(this.row, this.column, this.symbol, this.colour);
 }
 
@@ -470,7 +519,7 @@ Drone.prototype.mine = function() {
     switch(Math.floor((Math.random() * 4) + 1)) {
       //north
       case 1:
-        this.row-1 > 0 ? this.row-=1 : this.row=this.row;
+        this.row-1 >= 0 ? this.row-=1 : this.row=this.row;
         break;
       //east
       case 2:
@@ -482,7 +531,7 @@ Drone.prototype.mine = function() {
         break;
       //west
       case 4:
-        this.column-1 > 0 ? this.column-=1 : this.column=this.column;
+        this.column-1 >= 0 ? this.column-=1 : this.column=this.column;
         break;
     }
 
@@ -502,7 +551,13 @@ Drone.prototype.corridoor = function(index) {
   var column = this.column;
   var row = this.row;
 
-  updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+  var tile = tileAtPosition(row, column);
+  var symbol = this.mine_symbol;
+  if(tile.original_symbol == '~')
+  {
+    symbol = '~';
+  }
+  updateSymbol(this.row, this.column, symbol, tile.original_colour);
 
   if(next_point.row > row)
   {
@@ -532,11 +587,46 @@ Drone.prototype.corridoor = function(index) {
     }
     else
     {
-      console.log('corridoor drone dying');
       updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
       corridoor_drone = null;
     }
   }
+}
+
+Drone.prototype.water = function(index) {
+  var row = this.row;
+  var column = this.column;
+  switch(Math.floor((Math.random() * 4) + 1)) {
+    //north
+    case 1:
+      row-1 > 0 ? row-=1 : row=row;
+      break;
+    //east
+    case 2:
+      column+1 < columns ? column+=1 : column=column;
+      break;
+    //south
+    case 3:
+      row+1 < rows ? row+=1 : row=row;
+      break;
+    //west
+    case 4:
+      column-1 > 0 ? column-=1 : column=column;
+      break;
+  }
+
+  var temp_symbol = symbolAtPosition(row, column);
+  if(temp_symbol == '.' || temp_symbol == this.mine_symbol)
+  {
+    updateSymbol(this.row, this.column, this.mine_symbol, this.mine_colour);
+    var tile = tileAtPosition(this.row, this.column);
+    tile.original_colour = this.mine_colour;
+    tile.original_symbol = this.mine_symbol;
+    updateSymbol(row,column,this.symbol,this.colour);
+    this.column = column;
+    this.row = row;
+  }
+  this.life--;
 }
 
 Drone.prototype.die = function(index) {
