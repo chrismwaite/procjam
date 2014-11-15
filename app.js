@@ -20,6 +20,7 @@ var rows = 20;
 var font_size = 28;
 var default_style = { font: font_size + "px monospace", fill:default_colour};
 var cursors;
+var spacebar;
 
 //data
 var map = [];
@@ -34,13 +35,14 @@ var enemies = [];
 var mining_drones = [];
 var water_drones = [];
 var corridoor_drone = 'ready';
-var mining_event;
+var building_event;
 var cave_positions = [];
 var build_status = 'ready';
 
 //general
 var screen_width = columns*font_size*0.6;
 var screen_height = rows*font_size;
+var enemy_movement_event;
 
 //modifiers
 var max_caves = 5;
@@ -78,38 +80,46 @@ function create() {
   //initialise the drones
   initialiseDrones();
 
+  //controls
+  spacebar = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+  cursors = game.input.keyboard.createCursorKeys();
+
   //build the caves
-  mining_event = game.time.events.loop(250, buildLevel, this);
+  building_event = game.time.events.loop(125, buildLevel, this);
 }
 
 function postCreate() {
   //add enemies
   populateObjects();
 
-  //Keyboard controls
-  cursors = game.input.keyboard.createCursorKeys();
+  //activate keys
   cursors.left.onDown.add(move, this);
   cursors.right.onDown.add(move, this);
   cursors.up.onDown.add(move, this);
   cursors.down.onDown.add(move, this);
 
   //enemy movement timer
-  game.time.events.loop(Phaser.Timer.SECOND, moveEnemies, this);
+  enemy_movement_event = game.time.events.loop(Phaser.Timer.SECOND, moveEnemies, this);
+  build_status = 'complete';
+  updateBuildStatus();
 }
 
 function move(key) {
-  if(key.event.keyIdentifier == "Left")
+  if(player != null)
   {
-    player.updatePosition(player.x-1,player.y);
-  }
-  else if(key.event.keyIdentifier == "Right") {
-    player.updatePosition(player.x+1,player.y);
-  }
-  else if(key.event.keyIdentifier == "Up") {
-    player.updatePosition(player.x,player.y-1);
-  }
-  else if(key.event.keyIdentifier == "Down") {
-    player.updatePosition(player.x,player.y+1);
+    if(key.event.keyIdentifier == "Left")
+    {
+      player.updatePosition(player.x-1,player.y);
+    }
+    else if(key.event.keyIdentifier == "Right") {
+      player.updatePosition(player.x+1,player.y);
+    }
+    else if(key.event.keyIdentifier == "Up") {
+      player.updatePosition(player.x,player.y-1);
+    }
+    else if(key.event.keyIdentifier == "Down") {
+      player.updatePosition(player.x,player.y+1);
+    }
   }
 }
 
@@ -243,9 +253,11 @@ function buildLevel() {
   //done
   if(build_status == 'done')
   {
-    game.time.events.remove(mining_event);
+    game.time.events.remove(building_event);
     postCreate();
   }
+
+  updateBuildStatus();
 }
 
 function generateMap() {
@@ -352,13 +364,51 @@ function returnEnemyTypesAsArray() {
   return enemy_types_array;
 }
 
+function displayMessage(message_array) {
+  var row = 0;
+  for(var x=0; x<message_array.length; x++)
+  {
+    var column = 0;
+    var message = message_array[x];
+    for(var y=0; y<message.length; y++)
+    {
+      updateSymbol(row, column, message[y], '#FFF');
+      column++;
+    }
+    row++;
+  }
+}
+
 function reset() {
+  $('.step').css('visibility', 'hidden');
+  build_status = 'ready';
   game.state.start(game.state.current);
 }
 
 function dead() {
   //you are dead - click to restart
-  
+  game.time.events.remove(enemy_movement_event);
+  displayMessage(['YOU HAVE DIED','Press the spacebar to restart...']);
+  spacebar.onDown.add(reset, this);
+}
+
+function updateBuildStatus() {
+  if(build_status == 'ready') {
+    $('#1').css('visibility', 'visible');
+  }
+  else if(build_status == 'water') {
+    $('#2').css('visibility', 'visible');
+  }
+  else if(build_status == 'corridoors') {
+    $('#3').css('visibility', 'visible');
+  }
+  else if(build_status == 'done') {
+    $('#4').css('visibility', 'visible');
+  }
+  else if(build_status == 'complete') {
+    $('#4').css('visibility', 'visible');
+    $('#5').css('visibility', 'visible');
+  }
 }
 
 //Entities
@@ -425,7 +475,16 @@ Player.prototype.updateHealth = function(health) {
   else if(this.health <= 0) {
     this.colour = health_colour_0;
   }
-  updateSymbol(this.y,this.x,'@',this.colour);
+  if(this.health > 0)
+  {
+    updateSymbol(this.y,this.x,'@',this.colour);
+  }
+  else {
+    dead();
+    var tile = tileAtPosition(this.y,this.x);
+    updateSymbol(this.y,this.x,'.',tile.original_colour);
+    player = null;
+  }
 }
 
 function Enemy(x, y, symbol, colour) {
