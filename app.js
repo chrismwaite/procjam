@@ -75,6 +75,11 @@ function create() {
     reset();
   });
 
+  //reset corridoor drone
+  corridoor_drone = 'ready';
+  build_status = 'ready';
+  cave_positions = [];
+
   //generate map
   generateMap();
 
@@ -413,8 +418,7 @@ function updateBuildStatus() {
     $('#4').css('visibility', 'visible');
   }
   else if(build_status == 'complete') {
-    $('#4').css('visibility', 'visible');
-    $('#5').css('visibility', 'visible');
+    $('.step').css('visibility', 'visible');
   }
 }
 
@@ -594,11 +598,11 @@ Drone.prototype.mine = function() {
         break;
       //east
       case 2:
-        this.column+1 < columns ? this.column+=1 : this.column=this.column;
+        this.column+1 <= columns ? this.column+=1 : this.column=this.column;
         break;
       //south
       case 3:
-        this.row+1 < rows ? this.row+=1 : this.row=this.row;
+        this.row+1 <= rows ? this.row+=1 : this.row=this.row;
         break;
       //west
       case 4:
@@ -629,32 +633,34 @@ Drone.prototype.corridoor = function(index) {
     symbol = '~';
   }
   updateSymbol(this.row, this.column, symbol, tile.original_colour);
-
+  
   if(next_point.row > row)
   {
-    this.row+1 < rows ? this.row+=1 : this.row=this.row;
+    this.row+1 <= rows ? this.row+=1 : this.row=this.row;
   }
   else if(next_point.row < row)
   {
-    this.row-1 > 0 ? this.row-=1 : this.row=this.row;
+    this.row-1 >= 0 ? this.row-=1 : this.row=this.row;
   }
   else if(next_point.column > column)
   {
-    this.column+1 < columns ? this.column+=1 : this.column=this.column;
+    this.column+1 <= columns ? this.column+=1 : this.column=this.column;
   }
   else if(next_point.column < column)
   {
-    this.column-1 > 0 ? this.column-=1 : this.column=this.column;
+    this.column-1 >= 0 ? this.column-=1 : this.column=this.column;
   }
 
   updateSymbol(this.row, this.column, this.symbol, this.colour);
-
-  //die
+  
+  //die or advance to next cave
   if(column == next_point.column && row == next_point.row)
   {
-    if(cave_positions[this.current_cave+1])
+    var next_cave = this.current_cave+1;
+    if(cave_positions[next_cave])
     {
-      this.current_cave += 1;
+      this.current_cave = next_cave;
+      var next_cave_position = cave_positions[next_cave];
     }
     else
     {
@@ -670,19 +676,19 @@ Drone.prototype.water = function(index) {
   switch(Math.floor((Math.random() * 4) + 1)) {
     //north
     case 1:
-      row-1 > 0 ? row-=1 : row=row;
+      row-1 >= 0 ? row-=1 : row=row;
       break;
     //east
     case 2:
-      column+1 < columns ? column+=1 : column=column;
+      column+1 <= columns ? column+=1 : column=column;
       break;
     //south
     case 3:
-      row+1 < rows ? row+=1 : row=row;
+      row+1 <= rows ? row+=1 : row=row;
       break;
     //west
     case 4:
-      column-1 > 0 ? column-=1 : column=column;
+      column-1 >= 0 ? column-=1 : column=column;
       break;
   }
 
